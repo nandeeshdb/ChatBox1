@@ -1,6 +1,19 @@
 import express from  'express';
+import mongoose from 'mongoose';
+import User from './Models/User.js';
+import dotenv from 'dotenv'
 
-const app = express;
+dotenv.config()
+
+
+const app = express();
+
+mongoose.connect(process.env.MONGODB).then(()=>{
+    console.log('connected to the database')
+})
+.catch((err)=>{
+    console.log(err)
+})
 
 app.get('/test',(req,res)=>{
     res.json('test working')
