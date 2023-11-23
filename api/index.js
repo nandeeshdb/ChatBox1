@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import cookieParser from 'cookie-parser';
+import cors from 'cors'
 
 dotenv.config()
 
@@ -12,6 +13,10 @@ dotenv.config()
 const app = express();
 app.use(express.json())
 app.use(cookieParser())
+app.use(cors({
+    credentials:true,
+    origin:'http://localhost:5173'
+}))
 
 mongoose.connect(process.env.MONGODB).then(()=>{
     console.log('connected to the database')
@@ -39,6 +44,7 @@ app.post('/api/register',async(req,res)=>{
     } catch (error) {
 
         res.status(401).json({success:'false',message:'User not Created'})
+        throw(error)
         
     }
 
