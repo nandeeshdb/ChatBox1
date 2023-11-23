@@ -8,6 +8,37 @@ function Register() {
     const[loading,setLoading] =useState(false);
     const[error,setError] = useState(false)
 
+    const onSubmitHandler =async(e)=>{
+      e.preventDefault();
+      try {
+        setError(false)
+        setLoading(true)
+        const res = await fetch('/api/register',{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json'
+          },
+          body:JSON.stringify({username,password})
+        })
+
+        const data  = res.json();
+        if(data.success === 'false'){
+          console.log('user not registered')
+          setError(false)
+          setLoading(false)
+        }
+        console.log('user registered')
+        setError(false)
+        setLoading(false)
+        
+      } catch (error) {
+        setError(error)
+        setLoading(false)
+        
+      }
+
+    }
+
  
   return (
     <div className='bg-blue-50 h-screen flex items-center'>
