@@ -1,5 +1,5 @@
 import React from 'react'
-import Register from './RegisterAndLogin'
+import Register from './LoginAndRegistrationForm'
 import axios from 'axios'
 import Route from './Route';
 import { UserContextProvider } from './UserContext';
