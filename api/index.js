@@ -26,68 +26,68 @@ app.use(cors({
 
 mongoose.connect(process.env.MONGODB).then(()=>console.log('database is connected')).catch((err)=>console.log(err))
 
-app.post('/api/register',async (req,res)=>{
-
+app.post('/api/register', async (req,res) => {
     const {username,password} = req.body;
-    const hashedPassword = bcrypt.hashSync(password,10)
-    const newUser = new  User({username,password:hashedPassword})
     try {
-        const createdUser = await newUser.save()
-
-       const token = jwt.sign({userId:createdUser._id,username},process.env.JWT_SECRET)
-       
-        res.cookie('token',token,{ httpOnly: true }).status(200).json({success:"true" ,message:"User created" ,id:createdUser._id})
-
-       
-        
-    } catch (error) {
-        res.status(401).json({success:"false" ,message:"User not  created"})
-        
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      const createdUser = await User.create({
+        username:username,
+        password:hashedPassword,
+      });
+      jwt.sign({userId:createdUser._id,username}, process.env.JWT_SECRET, {}, (err, token) => {
+        if (err) throw err;
+        res.cookie('token', token, {sameSite:'none', secure:true}).status(201).json({
+          id: createdUser._id,
+          success : "true"
+        });
+      });
+    } catch(err) {
+      if (err) throw err;
+      res.status(500).json({success : "false"});
     }
-    
-})
+  });
 
 
 
-app.post('/api/login',async (req,res)=>{
+
+
+  app.post('/api/login',async(req,res)=>{
+
     const{username,password} = req.body
-    const findUser = await User.findOne({username})
-    if(findUser){
-        const comparePassword = bcrypt.compareSync(password,findUser.password)
-
-        if(comparePassword){
-            const token = jwt.sign({id:findUser._id,username},process.env.JWT_SECRET)
-            res.cookie('token',token,{ httpOnly: true }).status(200).json({success:"true" ,message:"User created" ,id:findUser._id})
-
-        }
-        else{
-            res.status(401).json({success:"false" ,message:"Incorrect password"})
+    const foundUser = await User.findOne({username})
+    if(foundUser){
+        const passok = bcrypt.compareSync(password,foundUser.password)
+        if(passok){
+            jwt.sign({userId:foundUser._id,username},process.env.JWT_SECRET,{},(err,token)=>{
+                if(err) throw err
+                res.cookie('token',token,  {sameSite:'none', secure:true}).json({
+                    id:foundUser._id
+                })
+            })
         }
     }
-    else{
-        res.status(401).json({success:"false" ,message:"User not found"})
+  })
 
-    }
-})
 
 
 
 
 app.get('/api/profile',(req,res)=>{
-    const token = req.cookies?.token
-  if(token){
+    const {token} = req.cookies
+   if(token){
     jwt.verify(token,process.env.JWT_SECRET,{},(err,userData)=>{
         if(err) throw err
-        
         res.json(userData)
         
     })
-  }
-    else{
-        res.status(401).json('Unauthorized')
-    }
-  
+   }
+
+   else{
+    res.status(401).json('no token')
+   }
 })
+
+
 
 app.listen(3000,()=>{
     console.log('server is running in port 3000')
