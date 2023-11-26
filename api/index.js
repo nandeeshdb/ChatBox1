@@ -1,57 +1,121 @@
-import express from  'express';
-import mongoose from 'mongoose';
-import User from './Models/User.js';
+import express, { json } from 'express'
+import mongoose, { connect } from 'mongoose';
 import dotenv from 'dotenv'
+import User from './Model/User.js';
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import cookieParser from 'cookie-parser';
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
+import ws, { WebSocketServer } from 'ws'
+
 
 dotenv.config()
 
 
 const app = express();
+
 app.use(express.json())
 app.use(cookieParser())
+
+// app.get('/test',(req,res)=>{
+//     res.json('test okay!')
+// })
+
 app.use(cors({
     credentials:true,
     origin:'http://localhost:5173'
 }))
 
-mongoose.connect(process.env.MONGODB).then(()=>{
-    console.log('connected to the database')
-})
-.catch((err)=>{
-    console.log(err)
-})
+mongoose.connect(process.env.MONGODB).then(()=>console.log('database is connected')).catch((err)=>console.log(err))
 
-// app.get('/test',(req,res)=>{
-//     res.json('test working')
-// })
-
-
-app.post('/api/register',async(req,res)=>{
-    const{username,password} = req.body
-    const hashPassword = bcrypt.hashSync(password,10)
-    const newUser = new User({username,password:hashPassword})
-
+app.post('/api/register', async (req,res) => {
+    const {username,password} = req.body;
     try {
-        const createdUser =  await newUser.save();
-        const token = jwt.sign({userId:createdUser._id},process.env.JWT_SECRET)
-        res.cookie('token',token,{httpOnly:true}).status(200).json({success:'true',message:'User created'})
-        
-        
-    } catch (error) {
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      const createdUser = await User.create({
+        username:username,
+        password:hashedPassword,
+      });
+      jwt.sign({userId:createdUser._id,username}, process.env.JWT_SECRET, {}, (err, token) => {
+        if (err) throw err;
+        res.cookie('token', token, {sameSite:'none', secure:true}).status(201).json({
+          id: createdUser._id,
+          success : "true"
+        });
+      });
+    } catch(err) {
+      if (err) throw err;
+      res.status(500).json({success : "false"});
+    }
+  });
 
-        res.status(401).json({success:'false',message:'User not Created'})
-        throw(error)
+
+
+
+
+  app.post('/api/login',async(req,res)=>{
+
+    const{username,password} = req.body
+    const foundUser = await User.findOne({username})
+    if(foundUser){
+        const passok = bcrypt.compareSync(password,foundUser.password)
+        if(passok){
+            jwt.sign({userId:foundUser._id,username},process.env.JWT_SECRET,{},(err,token)=>{
+                if(err) throw err
+                res.cookie('token',token,  {sameSite:'none', secure:true}).json({
+                    id:foundUser._id
+                })
+            })
+        }
+    }
+  })
+
+
+
+
+
+app.get('/api/profile',(req,res)=>{
+    const {token} = req.cookies
+   if(token){
+    jwt.verify(token,process.env.JWT_SECRET,{},(err,userData)=>{
+        if(err) throw err
+        res.json(userData)
         
+    })
+   }
+
+   else{
+    res.status(401).json('no token')
+   }
+})
+
+
+
+
+
+
+
+const server = app.listen(3000)
+const wss = new WebSocketServer({server})
+wss.on('connection',(connection,req)=>{
+    const cookies = req.headers.cookie;
+
+    if(cookies){
+        const tokenCookieString = cookies.split(';').find(str=> str.startsWith('token'))
+        if(tokenCookieString){
+            const token = tokenCookieString.split('=')[1]
+            if(token){
+                jwt.verify(token,process.env.JWT_SECRET,{},(err,userData)=>{
+                    if(err) throw err
+                    const{username,userId} =userData
+                    connection.userId = userId;
+                    connection.username = username
+                })
+            }
+
+        
+        }
     }
 
 })
 
-
-
-app.listen(3000,()=>{
-    console.log('app is running in port 3000')
-})

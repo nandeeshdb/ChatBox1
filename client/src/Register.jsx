@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 function Register() {
     const[username,setUserName] = useState('')
     const[password,setPassword] = useState('')
-
     const[loading,setLoading] =useState(false);
     const[error,setError] = useState(false)
+    const[created,setCreater] =useState(false)
 
     const onSubmitHandler =async(e)=>{
       e.preventDefault();
@@ -30,6 +30,7 @@ function Register() {
         console.log('user registered')
         setError(false)
         setLoading(false)
+        setCreater(true)
         
       } catch (error) {
         setError(error)
@@ -50,6 +51,9 @@ function Register() {
             }</button>
             {
               error && <p className='text-red-500 font-semibold'>{error}</p>
+            }
+            {
+              created && <p className='text-green-500 font-semibold'>User Created</p>
             }
         </form>
 
