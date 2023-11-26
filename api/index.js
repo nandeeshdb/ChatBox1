@@ -104,6 +104,7 @@ wss.on('connection',(connection,req)=>{
         const tokenCookieString = cookies.split(';').find(str=> str.startsWith('token'))
         if(tokenCookieString){
             const token = tokenCookieString.split('=')[1]
+            
             if(token){
                 jwt.verify(token,process.env.JWT_SECRET,{},(err,userData)=>{
                     if(err) throw err
@@ -116,6 +117,14 @@ wss.on('connection',(connection,req)=>{
         
         }
     }
+
+    [...wss.clients].forEach(client=>{
+     client.send(JSON.stringify(
+      {
+        online:[...wss.clients].map(c=>({userId:c.userId,username:c.username}))
+      }
+     ))
+    })
 
 })
 
